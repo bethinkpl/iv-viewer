@@ -1,6 +1,7 @@
 // constants
-export const ZOOM_CONSTANT = 15; // increase or decrease value for zoom on mouse wheel
-export const MOUSE_WHEEL_COUNT = 5; // A mouse delta after which it should stop preventing default behaviour of mouse wheel
+// modified by Bethink
+export const ZOOM_CONSTANT = 9; // increase or decrease value for zoom on mouse wheel
+export const MOUSE_WHEEL_COUNT = 1; // A mouse delta after which it should stop preventing default behaviour of mouse wheel
 
 export function noop () {}
 

@@ -1,9 +1,10 @@
 import { createElement, assignEvent, css, remove, removeCss } from './util';
 import ImageViewer from './ImageViewer';
 
+// add .iv-close for backwards compatibility with wnl-mobile-app
 const fullScreenHtml = `
   <div class="iv-fullscreen-container"></div>
-  <div class="iv-fullscreen-close"></div>
+  <div class="iv-fullscreen-close iv-close"></div>
 `;
 
 class FullScreenViewer extends ImageViewer {

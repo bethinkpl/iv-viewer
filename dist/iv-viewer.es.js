@@ -1,7 +1,7 @@
 /**
  * iv-viewer - 2.1.1
  * Author : Sudhanshu Yadav
- * Copyright (c) 2019, 2021 to Sudhanshu Yadav, released under the MIT license.
+ * Copyright (c) 2019, 2023 to Sudhanshu Yadav, released under the MIT license.
  * git+https://github.com/s-yadav/iv-viewer.git
  */
 
@@ -177,9 +177,9 @@ function _nonIterableRest() {
 }
 
 // constants
-var ZOOM_CONSTANT = 15; // increase or decrease value for zoom on mouse wheel
+var ZOOM_CONSTANT = 9; // increase or decrease value for zoom on mouse wheel
 
-var MOUSE_WHEEL_COUNT = 5; // A mouse delta after which it should stop preventing default behaviour of mouse wheel
+var MOUSE_WHEEL_COUNT = 1; // A mouse delta after which it should stop preventing default behaviour of mouse wheel
 
 function noop() {} // ease out method
 
@@ -1387,7 +1387,7 @@ ImageViewer.defaults = {
   }
 };
 
-var fullScreenHtml = "\n  <div class=\"iv-fullscreen-container\"></div>\n  <div class=\"iv-fullscreen-close\"></div>\n";
+var fullScreenHtml = "\n  <div class=\"iv-fullscreen-container\"></div>\n  <div class=\"iv-fullscreen-close iv-close\"></div>\n";
 
 var FullScreenViewer =
 /*#__PURE__*/
