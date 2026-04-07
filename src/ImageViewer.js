@@ -206,8 +206,10 @@ class ImageViewer {
     /* Add slide interaction to image */
     const imageSlider = new Slider(imageWrap, {
       isSliderEnabled: () => {
-        const { loaded, zooming, zoomValue } = this._state;
-        return loaded && !zooming && zoomValue > 100;
+        const { loaded, zooming, zoomValue, imageDim, containerDim } = this._state;
+        const imageOverflows = this._options.fitMode === 'orientation' &&
+          (imageDim.w * zoomValue / 100 > containerDim.w || imageDim.h * zoomValue / 100 > containerDim.h);
+        return loaded && !zooming && (zoomValue > 100 || imageOverflows);
       },
       onStart: (e, position) => {
         const { snapSlider } = this._sliders;
@@ -704,23 +706,39 @@ class ImageViewer {
 
     const ratio = imageWidth / imageHeight;
 
-    imgWidth = (imageWidth > imageHeight && contHeight >= contWidth) || ratio * contHeight > contWidth
-      ? contWidth
-      : ratio * contHeight;
-
-    imgHeight = imgWidth / ratio;
+    if (this._options.fitMode === 'orientation') {
+      if (imageWidth > imageHeight) {
+        // landscape: fit to container height
+        imgHeight = contHeight;
+        imgWidth = contHeight * ratio;
+      } else {
+        // portrait or square: fit to container width
+        imgWidth = contWidth;
+        imgHeight = contWidth / ratio;
+      }
+    } else {
+      // default contain fit
+      imgWidth = (imageWidth > imageHeight && contHeight >= contWidth) || ratio * contHeight > contWidth
+        ? contWidth
+        : ratio * contHeight;
+      imgHeight = imgWidth / ratio;
+    }
 
     this._state.imageDim = {
       w: imgWidth,
       h: imgHeight,
     };
 
+    const initialTop = this._options.initialPosition === 'top-center'
+      ? 0
+      : (contHeight - imgHeight) / 2;
+
     // reset image position and zoom
     css(image, {
       width: `${imgWidth}px`,
       height: `${imgHeight}px`,
       left: `${(contWidth - imgWidth) / 2}px`,
-      top: `${(contHeight - imgHeight) / 2}px`,
+      top: `${initialTop}px`,
       maxWidth: 'none',
       maxHeight: 'none',
     });
@@ -776,8 +794,9 @@ class ImageViewer {
 
     let step = 0;
 
-    const baseLeft = (containerDim.w - imageDim.w) / 2;
-    const baseTop = (containerDim.h - imageDim.h) / 2;
+    const isOrientationFit = this._options.fitMode === 'orientation';
+    const baseLeft = isOrientationFit ? 0 : (containerDim.w - imageDim.w) / 2;
+    const baseTop = isOrientationFit ? 0 : (containerDim.h - imageDim.h) / 2;
     const baseRight = containerDim.w - baseLeft;
     const baseBottom = containerDim.h - baseTop;
 
@@ -872,12 +891,15 @@ class ImageViewer {
   }
 
   showSnapView = (noTimeout) => {
-    const { snapViewVisible, zoomValue, loaded } = this._state;
+    const { snapViewVisible, zoomValue, loaded, imageDim, containerDim } = this._state;
     const { snapView } = this._elements;
 
     if (!this._options.snapView) return;
 
-    if (snapViewVisible || zoomValue <= 100 || !loaded) return;
+    const imageOverflows = this._options.fitMode === 'orientation' &&
+      (imageDim.w > containerDim.w || imageDim.h > containerDim.h);
+
+    if (snapViewVisible || (!imageOverflows && zoomValue <= 100) || !loaded) return;
 
     clearTimeout(this._frames.snapViewTimeout);
 
@@ -971,6 +993,8 @@ ImageViewer.defaults = {
   zoomOnMouseWheel: true,
   hasZoomButtons: false,
   zoomStep: 50,
+  fitMode: 'contain',        // 'contain' | 'orientation'
+  initialPosition: 'center', // 'center' | 'top-center'
   listeners: {
     onInit: null,
     onDestroy: null,
