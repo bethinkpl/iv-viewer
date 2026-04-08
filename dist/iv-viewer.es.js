@@ -1,7 +1,7 @@
 /**
  * iv-viewer - 2.1.1
  * Author : Sudhanshu Yadav
- * Copyright (c) 2019, 2023 to Sudhanshu Yadav, released under the MIT license.
+ * Copyright (c) 2019, 2026 to Sudhanshu Yadav, released under the MIT license.
  * git+https://github.com/s-yadav/iv-viewer.git
  */
 
@@ -177,6 +177,7 @@ function _nonIterableRest() {
 }
 
 // constants
+// modified by Bethink
 var ZOOM_CONSTANT = 9; // increase or decrease value for zoom on mouse wheel
 
 var MOUSE_WHEEL_COUNT = 1; // A mouse delta after which it should stop preventing default behaviour of mouse wheel
@@ -475,10 +476,12 @@ function () {
       _this._clearFrames();
 
       var step = 0;
-      var baseLeft = (containerDim.w - imageDim.w) / 2;
-      var baseTop = (containerDim.h - imageDim.h) / 2;
+      var isOrientationFit = _this._options.fitMode === 'orientation';
+      var isTopAligned = _this._options.initialPosition === 'top-center' || _this._options.autoHeight;
+      var baseLeft = isOrientationFit ? 0 : (containerDim.w - imageDim.w) / 2;
+      var baseTop = isTopAligned ? 0 : (containerDim.h - imageDim.h) / 2;
       var baseRight = containerDim.w - baseLeft;
-      var baseBottom = containerDim.h - baseTop;
+      var baseBottom = isTopAligned ? imageDim.h : containerDim.h - baseTop;
 
       var zoom = function zoom() {
         step++;
@@ -571,10 +574,13 @@ function () {
       var _this$_state = _this._state,
           snapViewVisible = _this$_state.snapViewVisible,
           zoomValue = _this$_state.zoomValue,
-          loaded = _this$_state.loaded;
+          loaded = _this$_state.loaded,
+          imageDim = _this$_state.imageDim,
+          containerDim = _this$_state.containerDim;
       var snapView = _this._elements.snapView;
       if (!_this._options.snapView) return;
-      if (snapViewVisible || zoomValue <= 100 || !loaded) return;
+      var imageOverflows = _this._options.fitMode === 'orientation' && (imageDim.w > containerDim.w || imageDim.h > containerDim.h);
+      if (snapViewVisible || !imageOverflows && zoomValue <= 100 || !loaded) return;
       clearTimeout(_this._frames.snapViewTimeout);
       _this._state.snapViewVisible = true;
       css(snapView, {
@@ -761,8 +767,11 @@ function () {
           var _this2$_state = _this2._state,
               loaded = _this2$_state.loaded,
               zooming = _this2$_state.zooming,
-              zoomValue = _this2$_state.zoomValue;
-          return loaded && !zooming && zoomValue > 100;
+              zoomValue = _this2$_state.zoomValue,
+              imageDim = _this2$_state.imageDim,
+              containerDim = _this2$_state.containerDim;
+          var imageOverflows = _this2._options.fitMode === 'orientation' && (imageDim.w * zoomValue / 100 > containerDim.w || imageDim.h * zoomValue / 100 > containerDim.h);
+          return loaded && !zooming && (zoomValue > 100 || imageOverflows);
         },
         onStart: function onStart(e, position) {
           var snapSlider = _this2._sliders.snapSlider; // clear all animation frame and interval
@@ -1254,18 +1263,43 @@ function () {
       var imgWidth;
       var imgHeight;
       var ratio = imageWidth / imageHeight;
-      imgWidth = imageWidth > imageHeight && contHeight >= contWidth || ratio * contHeight > contWidth ? contWidth : ratio * contHeight;
-      imgHeight = imgWidth / ratio;
+
+      if (this._options.fitMode === 'orientation') {
+        if (imageWidth > imageHeight) {
+          // landscape: fit to container height
+          imgHeight = contHeight;
+          imgWidth = contHeight * ratio;
+        } else {
+          // portrait or square: fit to container width
+          imgWidth = contWidth;
+          imgHeight = contWidth / ratio;
+        }
+      } else {
+        // default contain fit
+        imgWidth = imageWidth > imageHeight && contHeight >= contWidth || ratio * contHeight > contWidth ? contWidth : ratio * contHeight;
+        imgHeight = imgWidth / ratio;
+      }
+
       this._state.imageDim = {
         w: imgWidth,
         h: imgHeight
-      }; // reset image position and zoom
+      }; // autoHeight: shrink container to image height so iv-viewer never exceeds image size
+
+      if (this._options.autoHeight) {
+        contHeight = Math.round(imgHeight);
+        css(container, {
+          height: "".concat(contHeight, "px")
+        });
+        this._state.containerDim.h = contHeight;
+      }
+
+      var initialTop = this._options.autoHeight || this._options.initialPosition === 'top-center' ? 0 : (contHeight - imgHeight) / 2; // reset image position and zoom
 
       css(image, {
         width: "".concat(imgWidth, "px"),
         height: "".concat(imgHeight, "px"),
         left: "".concat((contWidth - imgWidth) / 2, "px"),
-        top: "".concat((contHeight - imgHeight) / 2, "px"),
+        top: "".concat(initialTop, "px"),
         maxWidth: 'none',
         maxHeight: 'none'
       }); // set the snap Image dimension
@@ -1379,6 +1413,12 @@ ImageViewer.defaults = {
   zoomOnMouseWheel: true,
   hasZoomButtons: false,
   zoomStep: 50,
+  fitMode: 'contain',
+  // 'contain' | 'orientation'
+  initialPosition: 'center',
+  // 'center' | 'top-center'
+  autoHeight: false,
+  // shrink container height to match image height
   listeners: {
     onInit: null,
     onDestroy: null,
