@@ -689,7 +689,7 @@ class ImageViewer {
     const imageHeight = parseInt(css(image, 'height'), 10);
 
     const contWidth = parseInt(css(container, 'width'), 10);
-    const contHeight = parseInt(css(container, 'height'), 10);
+    let contHeight = parseInt(css(container, 'height'), 10);
 
     const snapViewWidth = snapView.clientWidth;
     const snapViewHeight = snapView.clientHeight;
@@ -729,7 +729,14 @@ class ImageViewer {
       h: imgHeight,
     };
 
-    const initialTop = this._options.initialPosition === 'top-center'
+    // autoHeight: shrink container to image height so iv-viewer never exceeds image size
+    if (this._options.autoHeight) {
+      contHeight = Math.round(imgHeight);
+      css(container, { height: `${contHeight}px` });
+      this._state.containerDim.h = contHeight;
+    }
+
+    const initialTop = (this._options.autoHeight || this._options.initialPosition === 'top-center')
       ? 0
       : (contHeight - imgHeight) / 2;
 
@@ -795,10 +802,11 @@ class ImageViewer {
     let step = 0;
 
     const isOrientationFit = this._options.fitMode === 'orientation';
+    const isTopAligned = this._options.initialPosition === 'top-center' || this._options.autoHeight;
     const baseLeft = isOrientationFit ? 0 : (containerDim.w - imageDim.w) / 2;
-    const baseTop = isOrientationFit ? 0 : (containerDim.h - imageDim.h) / 2;
+    const baseTop = isTopAligned ? 0 : (containerDim.h - imageDim.h) / 2;
     const baseRight = containerDim.w - baseLeft;
-    const baseBottom = containerDim.h - baseTop;
+    const baseBottom = isTopAligned ? imageDim.h : containerDim.h - baseTop;
 
     const zoom = () => {
       step++;
@@ -995,6 +1003,7 @@ ImageViewer.defaults = {
   zoomStep: 50,
   fitMode: 'contain',        // 'contain' | 'orientation'
   initialPosition: 'center', // 'center' | 'top-center'
+  autoHeight: false,          // shrink container height to match image height
   listeners: {
     onInit: null,
     onDestroy: null,
